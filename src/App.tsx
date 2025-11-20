@@ -20,7 +20,6 @@ export default function App() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Carrega dados do Supabase ao iniciar
   useEffect(() => {
     async function loadAll() {
       try {
@@ -31,7 +30,7 @@ export default function App() {
         setServices(srv);
         setAppointments(appts);
       } catch (err) {
-        console.error('Erro ao carregar dados iniciais do Supabase', err);
+        console.error('Erro ao carregar dados do Supabase', err);
       } finally {
         setLoading(false);
       }
@@ -81,8 +80,8 @@ export default function App() {
     setAppointments(prev =>
       prev.map(a => (a.id === id ? { ...a, attended: !a.attended } : a)),
     );
-    const updated = appointments.find(a => a.id === id);
-    const newValue = !(updated?.attended ?? false);
+    const current = appointments.find(a => a.id === id);
+    const newValue = !(current?.attended ?? false);
     try {
       await toggleAttendance(id, newValue);
     } catch (err) {

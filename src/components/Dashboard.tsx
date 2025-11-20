@@ -8,12 +8,10 @@ type DashboardProps = {
   onAddService: (service: Omit<Service, 'id'>) => void;
   onUpdateService: (id: string, service: Omit<Service, 'id'>) => void;
   onDeleteService: (id: string) => void;
-
   onAddAppointment: (appointment: Omit<Appointment, 'id'>) => void;
   onUpdateAppointment: (id: string, appointment: Omit<Appointment, 'id'>) => void;
   onDeleteAppointment: (id: string) => void;
   onToggleAppointmentAttendance: (id: string) => void;
-
   onLogout: () => void;
 };
 
@@ -180,7 +178,6 @@ export function Dashboard({
   );
 
   useEffect(() => {
-    // Se NÃO estiver editando, sincroniza o campo data com o dia selecionado no calendário
     if (!editingAppointmentId) {
       setDate(selectedDate);
     }
@@ -212,10 +209,8 @@ export function Dashboard({
     };
 
     if (editingAppointmentId) {
-      // Editando um agendamento existente
       onUpdateAppointment(editingAppointmentId, data);
     } else {
-      // Novo agendamento
       onAddAppointment(data);
     }
 
@@ -253,11 +248,91 @@ export function Dashboard({
     () =>
       appointments
         .filter(
-          (a) => a.date === date && a.id !== editingAppointmentId, // ignora o próprio agendamento se estiver editando
+          (a) => a.date === date && a.id !== editingAppointmentId,
         )
         .map((a) => a.time),
     [appointments, date, editingAppointmentId],
   );
+
+  // --- BACKUP (EXPORTAR JSON) ---
+  function handleExportBackup() {
+    const dataBackup = {
+      exportedAt: new Date().toISOString(),
+      userName,
+      services,
+      appointments,
+    };
+
+    const blob = new Blob([JSON.stringify(dataBackup, null, 2)], {
+      type: 'application/json',
+    });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const today = new Date();
+    const fileDate = `${today.getFullYear()}-${pad(
+      today.getMonth() + 1,
+    )}-${pad(today.getDate())}`;
+    a.href = url;
+    a.download = `backup-vicky-nails-${fileDate}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // --- WHATSAPP CONFIRMAÇÃO / LEMBRETE ---
+  function sendWhatsAppMessage(
+    a: Appointment,
+    tipo: 'confirmacao' | 'lembrete',
+  ) {
+    if (!a.phone) {
+      alert('Este agendamento não tem telefone cadastrado.');
+      return;
+    }
+
+    const service = services.find((s) => s.id === a.serviceId);
+    const serviceName = service?.name ?? 'serviço';
+    const price = service?.price ?? 0;
+
+    const dateObj = new Date(a.date + 'T' + a.time);
+    const dataStr = dateObj.toLocaleDateString('pt-BR');
+    const horaStr = a.time;
+
+    const mensagens = {
+      confirmacao: `Olá, *${a.clientName}*! 💅✨
+
+Aqui é do *Studio Victoria*. Seu agendamento está CONFIRMADO!
+📅 Data: ${dataStr}
+⏰ Horário: ${horaStr}
+💖 Serviço: ${serviceName}
+💵 Valor: R$ ${price.toFixed(2).replace('.', ',')}
+
+Qualquer dúvida é só me chamar!
+Te espero no horário marcado 😊`,
+
+      lembrete: `Olá, *${a.clientName}*! 💅✨
+
+Passando para te lembrar do seu atendimento amanhã ❤️
+📅 Data: ${dataStr}
+⏰ Horário: ${horaStr}
+💖 Serviço: ${serviceName}
+
+Qualquer imprevisto, só avisar!
+Até amanhã 😊`,
+    };
+
+    const msg = encodeURIComponent(mensagens[tipo]);
+    const cleanPhone = a.phone.replace(/\D/g, '');
+    const url = `https://wa.me/55${cleanPhone}?text=${msg}`;
+    window.open(url, '_blank');
+  }
+
+  function handleSendWhatsAppConfirm(a: Appointment) {
+    sendWhatsAppMessage(a, 'confirmacao');
+  }
+
+  function handleSendWhatsAppReminder(a: Appointment) {
+    sendWhatsAppMessage(a, 'lembrete');
+  }
 
   // --- SERVIÇOS (MODAL) ---
   const [serviceName, setServiceName] = useState('');
@@ -397,6 +472,13 @@ export function Dashboard({
               onClick={() => setShowServicesModal(true)}
             >
               ⚙ Serviços
+            </button>
+            <button
+              className="btn-ghost"
+              type="button"
+              onClick={handleExportBackup}
+            >
+              ⭳ Backup
             </button>
             <button className="btn-outline" type="button" onClick={onLogout}>
               ⇢ Sair
@@ -541,6 +623,20 @@ export function Dashboard({
                           onClick={() => handleDeleteAppointmentClick(a.id)}
                         >
                           🗑 Excluir
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-small"
+                          onClick={() => handleSendWhatsAppConfirm(a)}
+                        >
+                          💬 Confirmar
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-small"
+                          onClick={() => handleSendWhatsAppReminder(a)}
+                        >
+                          🔔 Lembrete
                         </button>
                         <button
                           type="button"
@@ -723,7 +819,6 @@ export function Dashboard({
                   placeholder="Detalhes do serviço"
                 />
 
-                {/* Botão de submit oculto, para o requestSubmit do rodapé */}
                 <button type="submit" style={{ display: 'none' }}>
                   hidden-submit
                 </button>

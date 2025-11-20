@@ -1,8 +1,6 @@
 import { supabase } from './supabaseClient';
 import { Appointment, Service } from './types';
 
-// Helpers para mapear entre DB (snake_case) e app (camelCase)
-
 function mapServiceFromDb(row: any): Service {
   return {
     id: row.id,
@@ -78,9 +76,6 @@ export async function deleteService(id: string): Promise<void> {
   }
 }
 
-
-// APPOINTMENTS
-
 function mapAppointmentFromDb(row: any): Appointment {
   return {
     id: row.id,
@@ -126,7 +121,6 @@ export async function insertAppointment(
   data: Omit<Appointment, 'id'>,
 ): Promise<Appointment> {
   const payload = mapAppointmentToDb(data);
-
   const { data: rows, error } = await supabase
     .from('appointments')
     .insert(payload)
@@ -145,7 +139,6 @@ export async function updateAppointment(
   data: Omit<Appointment, 'id'>,
 ): Promise<Appointment> {
   const payload = mapAppointmentToDb(data);
-
   const { data: rows, error } = await supabase
     .from('appointments')
     .update(payload)
